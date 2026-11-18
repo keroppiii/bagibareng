@@ -1,7 +1,64 @@
 
+"use client";
+
 import Link from "next/link";
+import { useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
+import { apiRequest, saveAccessToken } from "@/lib/api";
+
+type LoginResponse = {
+  data: {
+    user: {
+      id: string;
+      name: string;
+      email: string;
+    };
+    accessToken: string;
+    expiresIn: string;
+  };
+};
 
 export default function LoginPage() {
+  const router = useRouter();
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+
+    const email = formData.get("email") as string;
+    const password = formData.get("password") as string;
+
+    setError("");
+    setLoading(true);
+
+    try {
+      const response = await apiRequest<LoginResponse>("/auth/login", {
+        method: "POST",
+        body: JSON.stringify({
+          email,
+          password,
+        }),
+      });
+
+      saveAccessToken(response.data.accessToken);
+
+      router.push("/dashboard");
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Terjadi kesalahan. Silakan coba lagi."
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <main className="flex min-h-dvh items-center justify-center bg-background px-5 py-4 sm:px-6 sm:py-6 [@media(max-height:650px)]:py-2">
       <div className="w-full max-w-md">
@@ -30,7 +87,10 @@ export default function LoginPage() {
           </div>
 
           {/* Login Form */}
-          <form className="space-y-4 [@media(max-height:650px)]:space-y-3">
+          <form
+            onSubmit={handleSubmit}
+            className="space-y-4 [@media(max-height:650px)]:space-y-3"
+          >
             <div>
               <label
                 htmlFor="email"
@@ -40,8 +100,10 @@ export default function LoginPage() {
               </label>
               <input
                 id="email"
+                name="email"
                 type="email"
                 placeholder="nama@email.com"
+                autoComplete="email"
                 className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                 required
               />
@@ -56,8 +118,10 @@ export default function LoginPage() {
               </label>
               <input
                 id="password"
+                name="password"
                 type="password"
                 placeholder="Masukkan password"
+                autoComplete="current-password"
                 className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                 required
               />
@@ -72,11 +136,19 @@ export default function LoginPage() {
               </a>
             </div>
 
+            {/* Error Message */}
+            {error && (
+              <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-600">
+                {error}
+              </p>
+            )}
+
             <button
               type="submit"
-              className="w-full rounded-full bg-primary-dark py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-primary"
+              disabled={loading}
+              className="w-full rounded-full bg-primary-dark py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-primary disabled:cursor-not-allowed disabled:opacity-60"
             >
-              Log in
+              {loading ? "Logging in..." : "Log in"}
             </button>
           </form>
 
@@ -88,15 +160,15 @@ export default function LoginPage() {
           </div>
 
           {/* Register Link */}
-            <p className="text-center text-sm text-muted">
+          <p className="text-center text-sm text-muted">
             Don&apos;t have an account?{" "}
             <Link
-                href="/register"
-                className="font-bold text-primary hover:underline"
+              href="/register"
+              className="font-bold text-primary hover:underline"
             >
-                Sign up
+              Sign up
             </Link>
-            </p>
+          </p>
         </div>
 
         {/* Footer */}

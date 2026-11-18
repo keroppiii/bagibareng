@@ -1,7 +1,62 @@
 
+"use client";
+
 import Link from "next/link";
+import { useState, type FormEvent } from "react";
+import { apiRequest } from "@/lib/api";
 
 export default function RegisterPage() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  
+async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  event.preventDefault();
+
+  const form = event.currentTarget;
+
+  setError("");
+  setSuccess("");
+
+  const formData = new FormData(form);
+
+  const name = formData.get("name") as string;
+  const email = formData.get("email") as string;
+  const password = formData.get("password") as string;
+  const confirmPassword = formData.get("confirmPassword") as string;
+
+  if (password !== confirmPassword) {
+    setError("Password dan konfirmasi password tidak sama.");
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    await apiRequest("/auth/register", {
+      method: "POST",
+      body: JSON.stringify({
+        name,
+        email,
+        password,
+        confirmPassword,
+      }),
+    });
+
+    form.reset();
+    setSuccess("Akun berhasil dibuat! Silakan login untuk melanjutkan.");
+  } catch (err) {
+    setError(
+      err instanceof Error
+        ? err.message
+        : "Terjadi kesalahan. Silakan coba lagi."
+    );
+  } finally {
+    setLoading(false);
+  }
+}
+
   return (
     <main className="flex min-h-screen items-center justify-center bg-background px-5 py-5">
       <div className="w-full max-w-md">
@@ -27,7 +82,7 @@ export default function RegisterPage() {
           </div>
 
           {/* Form */}
-          <form className="space-y-3">
+          <form className="space-y-3" onSubmit={handleSubmit}>
             {/* Full Name */}
             <div>
               <label
@@ -38,6 +93,7 @@ export default function RegisterPage() {
               </label>
               <input
                 id="name"
+                name="name"
                 type="text"
                 placeholder="Masukkan nama lengkap"
                 autoComplete="name"
@@ -56,6 +112,7 @@ export default function RegisterPage() {
               </label>
               <input
                 id="email"
+                name="email"
                 type="email"
                 placeholder="nama@email.com"
                 autoComplete="email"
@@ -74,6 +131,7 @@ export default function RegisterPage() {
               </label>
               <input
                 id="password"
+                name="password"
                 type="password"
                 placeholder="Minimal 8 karakter"
                 autoComplete="new-password"
@@ -93,6 +151,7 @@ export default function RegisterPage() {
               </label>
               <input
                 id="confirmPassword"
+                name="confirmPassword"
                 type="password"
                 placeholder="Masukkan ulang password"
                 autoComplete="new-password"
@@ -108,12 +167,27 @@ export default function RegisterPage() {
               BagiBareng secara bertanggung jawab.
             </p>
 
+            {/* Error Message */}
+            {error && (
+              <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-600">
+                {error}
+              </p>
+            )}
+
+            {/* Success Message */}
+            {success && (
+              <p className="rounded-xl bg-green-50 px-3 py-2 text-sm text-green-700">
+                {success}
+              </p>
+            )}
+
             {/* Submit */}
             <button
               type="submit"
-              className="w-full rounded-full bg-primary-dark py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-primary"
+              disabled={loading}
+              className="w-full rounded-full bg-primary-dark py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-primary disabled:cursor-not-allowed disabled:opacity-60"
             >
-              Create Account
+              {loading ? "Creating account..." : "Create Account"}
             </button>
           </form>
 

@@ -3,35 +3,61 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { apiRequest } from "@/lib/api";
 
 const emojis = [
   "👥", "🏖️", "🍜", "🏠", "✈️", "🎉",
   "🎮", "🛍️", "🎂", "☕", "🚗", "💼",
 ];
 
+type CreateGroupResponse = {
+  data: {
+    id: string;
+    name: string;
+    emoji: string;
+    description: string | null;
+    inviteCode: string;
+  };
+};
+
 export default function CreateGroupPage() {
   const [groupName, setGroupName] = useState("");
   const [description, setDescription] = useState("");
   const [selectedEmoji, setSelectedEmoji] = useState("👥");
   const [created, setCreated] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  // Simulasi kode sementara untuk pengembangan frontend.
-  // Nantinya diganti dengan kode dari respons API backend.
   const [inviteCode, setInviteCode] = useState("");
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  e.preventDefault();
 
-    // Simulasi pembuatan grup.
-    // Belum menyimpan data ke database.
-    const temporaryCode = "BB-" + Math.random()
-      .toString(36)
-      .substring(2, 8)
-      .toUpperCase();
+  try {
+    setLoading(true);
+    setError("");
 
-    setInviteCode(temporaryCode);
+    const response = await apiRequest<CreateGroupResponse>("/groups", {
+      method: "POST",
+      body: JSON.stringify({
+        name: groupName.trim(),
+        emoji: selectedEmoji,
+        description: description.trim() || undefined,
+      }),
+    });
+
+    setInviteCode(response.data.inviteCode);
     setCreated(true);
-  };
+  } catch (err) {
+    setError(
+      err instanceof Error
+        ? err.message
+        : "Gagal membuat grup. Silakan coba lagi."
+    );
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleCopy = async () => {
     try {
@@ -67,6 +93,11 @@ export default function CreateGroupPage() {
               </div>
 
               <form onSubmit={handleSubmit}>
+                {error && (
+                  <div className="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+                    {error}
+                  </div>
+                )}
                 <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-3">
 
                   {/* Form */}
@@ -231,10 +262,11 @@ export default function CreateGroupPage() {
                       <div className="mt-5 space-y-3">
                         <button
                           type="submit"
-                          className="flex w-full items-center justify-center gap-2 rounded-full bg-primary-dark px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-primary"
+                          disabled={loading}
+                          className="flex w-full items-center justify-center gap-2 rounded-full bg-primary-dark px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-primary disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                          Create Group
-                          <span>→</span>
+                          {loading ? "Creating Group..." : "Create Group"}
+                          {!loading && <span>→</span>}
                         </button>
 
                         <Link
@@ -341,10 +373,7 @@ export default function CreateGroupPage() {
                   Create Another
                 </button>
               </div>
-
-              <p className="mt-5 text-[10px] text-muted">
-                Frontend preview only — group data is not saved yet.
-              </p>
+              
             </div>
           )}
 

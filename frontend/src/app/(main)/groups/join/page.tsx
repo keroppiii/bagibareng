@@ -3,44 +3,101 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { apiRequest } from "@/lib/api";
 
-const demoGroup = {
-  code: "BB-WK26X9",
-  name: "Weekend Trip",
-  description: "Our little getaway together",
-  emoji: "🏖️",
-  creator: "Fatimah",
-  members: 4,
+type GroupPreview = {
+  name: string;
+  emoji: string;
+  description: string | null;
+  ownerName: string;
+  memberCount: number;
+  alreadyMember: boolean;
+};
+
+type JoinedGroup = {
+  id: string;
+  name: string;
+  emoji: string;
+  description: string | null;
+  inviteCode: string;
+  myRole: string;
+  memberCount: number;
+};
+
+type GroupPreviewResponse = {
+  data: GroupPreview;
+};
+
+type JoinGroupResponse = {
+  data: JoinedGroup;
 };
 
 export default function JoinGroupPage() {
   const [inviteCode, setInviteCode] = useState("");
-  const [foundGroup, setFoundGroup] = useState(false);
-  const [error, setError] = useState("");
-  const [joined, setJoined] = useState(false);
+const [foundGroup, setFoundGroup] = useState<GroupPreview | null>(null);
+const [joined, setJoined] = useState(false);
+const [joinedGroup, setJoinedGroup] = useState<JoinedGroup | null>(null);
+const [error, setError] = useState("");
 
-  const handleFindGroup = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+const [loadingPreview, setLoadingPreview] = useState(false);
+const [joining, setJoining] = useState(false);
 
+  const handleFindGroup = async (e: React.FormEvent<HTMLFormElement>) => {
+  e.preventDefault();
+
+  const normalizedCode = inviteCode.trim().toUpperCase();
+
+  setInviteCode(normalizedCode);
+  setError("");
+  setFoundGroup(null);
+  setJoined(false);
+  setJoinedGroup(null);
+
+  try {
+    setLoadingPreview(true);
+
+    const response = await apiRequest<GroupPreviewResponse>(
+      `/groups/invite/${encodeURIComponent(normalizedCode)}`
+    );
+
+    setFoundGroup(response.data);
+  } catch (err) {
+    setError(
+      err instanceof Error
+        ? err.message
+        : "Group not found. Please check your invitation code."
+    );
+  } finally {
+    setLoadingPreview(false);
+  }
+};
+
+const handleJoinGroup = async () => {
+  if (!foundGroup || foundGroup.alreadyMember) return;
+
+  try {
+    setJoining(true);
     setError("");
-    setFoundGroup(false);
-    setJoined(false);
 
-    const normalizedCode = inviteCode.trim().toUpperCase();
+    const response = await apiRequest<JoinGroupResponse>("/groups/join", {
+      method: "POST",
+      body: JSON.stringify({
+        inviteCode: inviteCode.trim().toUpperCase(),
+      }),
+    });
 
-    // Simulasi pencarian kode undangan.
-    if (normalizedCode === demoGroup.code) {
-      setFoundGroup(true);
-    } else {
-      setError("Group not found. Please check your invitation code.");
-    }
-  };
-
-  const handleJoinGroup = () => {
-    // Simulasi bergabung.
-    // Nantinya diganti dengan request ke backend.
+    setJoinedGroup(response.data);
     setJoined(true);
-  };
+  } catch (err) {
+    setError(
+      err instanceof Error
+        ? err.message
+        : "Failed to join group. Please try again."
+    );
+  } finally {
+    setJoining(false);
+  }
+};
 
   return (
   <main className="min-h-screen bg-background text-foreground">
@@ -96,7 +153,7 @@ export default function JoinGroupPage() {
                       onChange={(e) => {
                         setInviteCode(e.target.value.toUpperCase());
                         setError("");
-                        setFoundGroup(false);
+                        setFoundGroup(null);
                       }}
                       placeholder="e.g. BB-WK26X9"
                       className="w-full rounded-xl border border-border bg-background px-4 py-3.5 text-sm font-bold uppercase tracking-wider outline-none transition focus:border-primary"
@@ -110,10 +167,11 @@ export default function JoinGroupPage() {
 
                     <button
                       type="submit"
-                      className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-primary-dark px-5 py-3 text-sm font-semibold text-white transition hover:bg-primary"
+                      disabled={loadingPreview}
+                      className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-primary-dark px-5 py-3 text-sm font-semibold text-white transition hover:bg-primary disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      Find Group
-                      <span>→</span>
+                      {loadingPreview ? "Finding Group..." : "Find Group"}
+                      {!loadingPreview && <span>→</span>}
                     </button>
                   </form>
 
@@ -136,22 +194,28 @@ export default function JoinGroupPage() {
                         Group Found!
                       </h2>
 
-                      <span className="rounded-full bg-green-50 px-3 py-1 text-[10px] font-bold text-green-600">
-                        Available
+                      <span
+                        className={`rounded-full px-3 py-1 text-[10px] font-bold ${
+                          foundGroup.alreadyMember
+                            ? "bg-blue-50 text-blue-600"
+                            : "bg-green-50 text-green-600"
+                        }`}
+                      >
+                        {foundGroup.alreadyMember ? "Already Joined" : "Available"}
                       </span>
                     </div>
 
                     <div className="flex items-center gap-4">
                       <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-3xl">
-                        {demoGroup.emoji}
+                        {foundGroup.emoji}
                       </div>
 
                       <div className="min-w-0">
                         <h3 className="text-base font-bold">
-                          {demoGroup.name}
+                          {foundGroup.name}
                         </h3>
                         <p className="mt-1 text-xs text-muted">
-                          {demoGroup.description}
+                          {foundGroup.description}
                         </p>
                       </div>
                     </div>
@@ -161,21 +225,21 @@ export default function JoinGroupPage() {
                       <div className="flex justify-between text-xs">
                         <span className="text-muted">Created by</span>
                         <span className="font-semibold">
-                          {demoGroup.creator}
+                          {foundGroup.ownerName}
                         </span>
                       </div>
 
                       <div className="flex justify-between text-xs">
                         <span className="text-muted">Members</span>
                         <span className="font-semibold">
-                          {demoGroup.members} members
+                          {foundGroup.memberCount} members
                         </span>
                       </div>
 
                       <div className="flex justify-between text-xs">
                         <span className="text-muted">Invitation Code</span>
                         <span className="font-semibold">
-                          {demoGroup.code}
+                          {inviteCode}
                         </span>
                       </div>
                     </div>
@@ -183,10 +247,15 @@ export default function JoinGroupPage() {
                     <button
                       type="button"
                       onClick={handleJoinGroup}
-                      className="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-primary-dark px-5 py-3 text-sm font-semibold text-white transition hover:bg-primary"
+                      disabled={joining || foundGroup.alreadyMember}
+                      className="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-primary-dark px-5 py-3 text-sm font-semibold text-white transition hover:bg-primary disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      Join Group
-                      <span>→</span>
+                      {joining
+                        ? "Joining Group..."
+                        : foundGroup.alreadyMember
+                          ? "Already a Member"
+                          : "Join Group"}
+                      {!joining && !foundGroup.alreadyMember && <span>→</span>}
                     </button>
                   </div>
                 )}
@@ -206,19 +275,19 @@ export default function JoinGroupPage() {
                 <p className="mt-3 text-sm leading-relaxed text-muted">
                   You have successfully joined the group
                   <span className="font-bold text-foreground">
-                    {" "}{demoGroup.name}
+                    {" "}{joinedGroup?.name}
                   </span>.
                 </p>
 
                 <div className="my-6 rounded-xl bg-blue-50 p-4">
                   <div className="text-3xl">
-                    {demoGroup.emoji}
+                    {joinedGroup?.emoji}
                   </div>
                   <p className="mt-2 text-sm font-bold text-blue-900">
-                    {demoGroup.name}
+                    {joinedGroup?.name}
                   </p>
                   <p className="mt-1 text-xs text-blue-700">
-                    {demoGroup.members + 1} members
+                    {joinedGroup?.memberCount} members
                   </p>
                 </div>
 
@@ -229,9 +298,6 @@ export default function JoinGroupPage() {
                   Go to My Groups
                 </Link>
 
-                <p className="mt-4 text-[10px] text-muted">
-                  Frontend preview only — membership is not saved yet.
-                </p>
               </div>
             )}
 
