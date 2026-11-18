@@ -1,5 +1,8 @@
 
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
 
 const features = [
   {
@@ -73,45 +76,141 @@ const steps = [
   },
 ];
 
+
 export default function Home() {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
   return (
     <main className="h-screen overflow-y-auto overflow-x-hidden bg-background text-foreground lg:snap-y lg:snap-mandatory">
       {/* PAGE 1: HERO */}
       <section className="relative flex min-h-screen flex-col lg:h-screen lg:min-h-0 lg:snap-start">
         {/* NAVBAR */}
-        <nav className="relative z-20 mx-auto flex w-full max-w-7xl shrink-0 items-center justify-between px-5 py-4 sm:px-8 lg:px-10">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-dark text-lg text-white">
-              🧾
+        <nav className="relative z-20 mx-auto w-full max-w-7xl px-5 py-4 sm:px-8 lg:px-10">
+          <div className="flex items-center justify-between">
+            {/* LOGO */}
+            <Link
+              href="/"
+              className="flex items-center gap-2"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-dark text-lg text-white">
+                🧾
+              </div>
+              <span className="text-lg font-extrabold tracking-tight">
+                BagiBareng<span className="text-primary">.</span>
+              </span>
+            </Link>
+
+            {/* DESKTOP NAVIGATION */}
+            <div className="hidden items-center gap-7 text-sm font-medium text-muted md:flex">
+              <Link href="#features" className="transition hover:text-primary">
+                Features
+              </Link>
+              <Link
+                href="#how-it-works"
+                className="transition hover:text-primary"
+              >
+                How it works
+              </Link>
             </div>
-            <span className="text-lg font-extrabold tracking-tight">
-              BagiBareng<span className="text-primary">.</span>
-            </span>
-          </Link>
 
-          <div className="hidden items-center gap-7 text-sm font-medium text-muted md:flex">
-            <Link href="#features" className="transition hover:text-primary">
-              Features
-            </Link>
-            <Link href="#how-it-works" className="transition hover:text-primary">
-              How it works
-            </Link>
+            {/* DESKTOP AUTH BUTTONS */}
+            <div className="hidden items-center gap-2 md:flex">
+              <Link
+                href="/login"
+                className="rounded-full px-4 py-2 text-sm font-semibold transition hover:bg-secondary"
+              >
+                Log in
+              </Link>
+              <Link
+                href="/register"
+                className="rounded-full bg-primary-dark px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-primary"
+              >
+                Sign Up
+              </Link>
+            </div>
+
+            {/* MOBILE HAMBURGER */}
+            <button
+              type="button"
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              aria-label={isMenuOpen ? "Close menu" : "Open menu"}
+              aria-expanded={isMenuOpen}
+              className="flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-white text-foreground transition hover:bg-secondary md:hidden"
+            >
+              {isMenuOpen ? (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="21"
+                  height="21"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                >
+                  <path d="M18 6 6 18" />
+                  <path d="m6 6 12 12" />
+                </svg>
+              ) : (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="21"
+                  height="21"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                >
+                  <path d="M4 6h16" />
+                  <path d="M4 12h16" />
+                  <path d="M4 18h16" />
+                </svg>
+              )}
+            </button>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Link
-              href="/login"
-              className="hidden rounded-full px-4 py-2 text-sm font-semibold transition hover:bg-secondary sm:block"
-            >
-              Log in
-            </Link>
-            <Link
-              href="/register"
-              className="rounded-full bg-primary-dark px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-primary"
-            >
-              Get Started
-            </Link>
-          </div>
+          {/* MOBILE MENU */}
+          {isMenuOpen && (
+            <div className="absolute left-5 right-5 top-full mt-1 rounded-2xl border border-border bg-white p-4 shadow-xl md:hidden">
+              <nav className="space-y-1">
+                <Link
+                  href="#features"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="block rounded-xl px-4 py-3 text-sm font-semibold text-muted transition hover:bg-background hover:text-primary"
+                >
+                  Features
+                </Link>
+
+                <Link
+                  href="#how-it-works"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="block rounded-xl px-4 py-3 text-sm font-semibold text-muted transition hover:bg-background hover:text-primary"
+                >
+                  How it works
+                </Link>
+              </nav>
+
+              <div className="mt-3 flex gap-2 border-t border-border pt-4">
+                <Link
+                  href="/login"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="flex-1 rounded-full border border-border px-4 py-2.5 text-center text-sm font-semibold transition hover:bg-secondary"
+                >
+                  Log in
+                </Link>
+
+                <Link
+                  href="/register"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="flex-1 rounded-full bg-primary-dark px-4 py-2.5 text-center text-sm font-semibold text-white transition hover:bg-primary"
+                >
+                  Sign Up
+                </Link>
+              </div>
+            </div>
+          )}
         </nav>
 
         {/* HERO CONTENT */}
@@ -322,7 +421,7 @@ export default function Home() {
                 href="/register"
                 className="mt-6 inline-flex rounded-full bg-primary-dark px-6 py-3 text-sm font-semibold text-white transition hover:bg-primary"
               >
-                Get Started for Free →
+                Get Started →
               </Link>
             </div>
 
