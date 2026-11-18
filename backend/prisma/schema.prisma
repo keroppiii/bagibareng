@@ -1,0 +1,113 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum MemberRole {
+  OWNER
+  MEMBER
+}
+
+enum SplitMethod {
+  EQUAL
+  CUSTOM
+}
+
+enum ExpenseCategory {
+  FOOD
+  TRANSPORT
+  GROCERIES
+  ACCOMMODATION
+  ENTERTAINMENT
+  BILLS
+  OTHER
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  ownedGroups     Group[]
+  memberships     GroupMember[]
+  paidExpenses    Expense[]      @relation("ExpensePayer")
+  createdExpenses Expense[]      @relation("ExpenseCreator")
+  splits          ExpenseSplit[]
+}
+
+model Group {
+  id          String   @id @default(uuid())
+  name        String
+  emoji       String   @default("👥")
+  description String?
+  inviteCode  String   @unique
+  ownerId     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  owner    User          @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  members  GroupMember[]
+  expenses Expense[]
+
+  @@index([ownerId])
+}
+
+model GroupMember {
+  id       String     @id @default(uuid())
+  groupId  String
+  userId   String
+  role     MemberRole @default(MEMBER)
+  joinedAt DateTime   @default(now())
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+  @@index([userId])
+}
+
+model Expense {
+  id          String          @id @default(uuid())
+  groupId     String
+  paidById    String
+  createdById String
+  title       String
+  description String?
+  category    ExpenseCategory @default(OTHER)
+  amount      Int
+  expenseDate DateTime        @default(now())
+  splitMethod SplitMethod     @default(EQUAL)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  group     Group          @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  paidBy    User           @relation("ExpensePayer", fields: [paidById], references: [id], onDelete: Restrict)
+  createdBy User           @relation("ExpenseCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  splits    ExpenseSplit[]
+
+  @@index([groupId, expenseDate(sort: Desc)])
+  @@index([paidById])
+}
+
+model ExpenseSplit {
+  id         String    @id @default(uuid())
+  expenseId  String
+  userId     String
+  amountOwed Int
+  isPaid     Boolean   @default(false)
+  paidAt     DateTime?
+
+  expense Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([expenseId, userId])
+  @@index([userId, isPaid])
+}
