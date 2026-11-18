@@ -1,13 +1,6 @@
 
 import Link from "next/link";
 
-const menuItems = [
-  { icon: "⌂", label: "Dashboard", href: "/dashboard", active: true },
-  { icon: "▤", label: "My Groups", href: "/groups", active: false },
-  { icon: "↔", label: "Activity", href: "/activity", active: false },
-  { icon: "⚙", label: "Settings", href: "/settings", active: false },
-];
-
 const groups = [
   {
     emoji: "🏖️",
@@ -58,115 +51,31 @@ const activities = [
 
 export default function DashboardPage() {
   return (
-    <main className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-background text-foreground">
+      <section className="min-w-0 px-5 py-7 sm:px-8 lg:px-10">
 
-      {/* Mobile Header */}
-      <header className="flex items-center justify-between border-b border-border bg-white px-5 py-4 lg:hidden">
-        <Link href="/" className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-dark text-lg text-white">
-            🧾
+        {/* Top Header */}
+        <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+          <div>
+            <p className="mb-1 text-sm text-muted">
+              Tuesday, November 17, 2026
+            </p>
+            <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">
+              Good evening, Fatimah! 👋
+            </h1>
+            <p className="mt-2 text-sm text-muted">
+              Here&apos;s what&apos;s happening with your expenses.
+            </p>
           </div>
-          <span className="text-lg font-bold">
-            BagiBareng<span className="text-primary">.</span>
-          </span>
-        </Link>
 
-        <button className="rounded-xl border border-border px-3 py-2 text-sm">
-          ☰
-        </button>
-      </header>
-
-      <div className="min-h-screen lg:pl-56">
-
-        
-        {/* Sidebar */}
-        <aside className="fixed left-0 top-0 hidden h-screen w-56 flex-col border-r border-border bg-white px-4 py-6 lg:flex">
-
-        {/* Logo */}
-        <Link href="/" className="mb-9 flex items-center gap-2 px-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-dark text-lg text-white">
-            🧾
-            </div>
-            <span className="text-lg font-bold tracking-tight">
-            BagiBareng<span className="text-primary">.</span>
-            </span>
-        </Link>
-
-        {/* Navigation */}
-        <p className="mb-3 px-3 text-[10px] font-bold uppercase tracking-widest text-muted">
-            Menu
-        </p>
-
-        <nav className="space-y-1">
-            {menuItems.map((item) => (
-            <Link
-                key={item.label}
-                href={item.href}
-                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-semibold transition ${
-                item.active
-                    ? "bg-primary-dark text-white shadow-sm"
-                    : "text-muted hover:bg-background hover:text-foreground"
-                }`}
-            >
-                <span className="text-base">{item.icon}</span>
-                {item.label}
-            </Link>
-            ))}
-        </nav>
-
-        {/* Bottom Sidebar */}
-        <div className="mt-auto border-t border-border pt-4">
-
-            {/* Profile */}
-            <div className="mb-2 flex items-center gap-2.5 rounded-xl p-2">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-primary-dark">
-                FN
-            </div>
-
-            <div className="min-w-0">
-                <p className="truncate text-xs font-bold">Fatimah</p>
-                <p className="text-[10px] text-muted">Personal Account</p>
-            </div>
-            </div>
-
-            {/* Logout */}
-            <Link
-            href="/login"
-            className="flex items-center gap-3 rounded-lg px-3 py-2 text-xs font-semibold text-muted transition hover:bg-red-50 hover:text-red-500"
-            >
-            <span className="text-base">↪</span>
-            Log out
-            </Link>
-
+          <Link
+            href="/groups/create"
+            className="inline-flex items-center justify-center gap-2 rounded-full bg-primary-dark px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-primary"
+          >
+            <span className="text-lg">+</span>
+            Create New Group
+          </Link>
         </div>
-        </aside>
-
-
-        {/* Main Content */}
-        <section className="min-w-0 px-5 py-7 sm:px-8 lg:px-10">
-
-          {/* Top Header */}
-          <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-            <div>
-              <p className="mb-1 text-sm text-muted">
-                Tuesday, November 17, 2026
-              </p>
-              <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">
-                Good evening, Fatimah! 👋
-              </h1>
-              <p className="mt-2 text-sm text-muted">
-                Here&apos;s what&apos;s happening with your expenses.
-                </p>
-            </div>
-
-            <Link
-              href="/groups/create"
-              className="inline-flex items-center justify-center gap-2 rounded-full bg-primary-dark px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-primary"
-            >
-              <span className="text-lg">+</span>
-              Create New Group
-            </Link>
-          </div>
 
           {/* Summary Cards */}
           <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -330,13 +239,12 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Footer */}
-          <footer className="mt-8 border-t border-border py-5 text-center text-xs text-muted">
-            © 2026 BagiBareng. Made for sharing. 💙
-          </footer>
+        {/* Footer */}
+        <footer className="mt-8 border-t border-border py-5 text-center text-xs text-muted">
+          © 2026 BagiBareng. Made for sharing. 💙
+        </footer>
 
-        </section>
-      </div>
-    </main>
+      </section>
+    </div>
   );
 }
