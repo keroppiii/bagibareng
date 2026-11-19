@@ -1,19 +1,73 @@
 
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { getInitials } from "@/utils/initials";
+import {
+  apiRequest,
+  removeAccessToken,
+} from "@/lib/api";
+
+type User = {
+  id: string;
+  name: string;
+  email: string;
+};
 
 export default function SettingsPage() {
-  const [name, setName] = useState("Fatimah Nurmawati");
-  const [email, setEmail] = useState("fatimah@example.com");
-  const [currency, setCurrency] = useState("IDR");
-  const [saved, setSaved] = useState(false);
+  const router = useRouter();
 
-  const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+  const [user, setUser] = useState<User | null>(null);
+  const [currency, setCurrency] = useState("IDR");
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [error, setError] = useState("");
+
+  // Mengambil data profil pengguna
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        setIsLoading(true);
+        setError("");
+
+        const response = await apiRequest<{ data: User }>(
+          "/auth/me"
+        );
+
+        setUser(response.data);
+      } catch (err) {
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Failed to load profile."
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, []);
+
+  // Logout
+  const handleLogout = async () => {
+    try {
+      setIsLoggingOut(true);
+
+      await apiRequest("/auth/logout", {
+        method: "POST",
+      });
+    } catch {
+      // Tetap hapus token jika server tidak dapat dihubungi.
+    } finally {
+      removeAccessToken();
+      router.replace("/login");
+    }
   };
+
+  const name = user?.name || "User";
+  const email = user?.email || "-";
 
   return (
     <div className="min-h-screen bg-background px-5 py-8 sm:px-8 lg:px-10">
@@ -23,13 +77,22 @@ export default function SettingsPage() {
           <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-primary">
             Account
           </p>
+
           <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
             Settings
           </h1>
+
           <p className="mt-2 text-sm text-muted">
             Manage your profile and account preferences.
           </p>
         </div>
+
+        {/* Error State */}
+        {error && (
+          <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-4">
+            <p className="text-sm text-red-600">{error}</p>
+          </div>
+        )}
 
         <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
           {/* Main Settings */}
@@ -40,20 +103,26 @@ export default function SettingsPage() {
                 <h2 className="text-base font-bold text-foreground">
                   Profile Information
                 </h2>
+
                 <p className="mt-1 text-xs text-muted">
-                  Update your personal information.
+                  Your personal account information.
                 </p>
               </div>
 
               {/* Avatar */}
               <div className="mb-7 flex items-center gap-4">
                 <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-blue-100 text-lg font-bold text-primary-dark">
-                  {getInitials(name)}
+                  {isLoading ? "..." : getInitials(name)}
                 </div>
 
-                <div>
-                  <p className="text-sm font-bold text-foreground">{name}</p>
-                  <p className="mt-1 text-xs text-muted">{email}</p>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-bold text-foreground">
+                    {isLoading ? "Loading..." : name}
+                  </p>
+
+                  <p className="mt-1 truncate text-xs text-muted">
+                    {isLoading ? "Loading profile..." : email}
+                  </p>
                 </div>
               </div>
 
@@ -65,12 +134,14 @@ export default function SettingsPage() {
                   >
                     Full Name
                   </label>
+
                   <input
                     id="fullName"
                     type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-foreground outline-none transition placeholder:text-muted focus:border-primary"
+                    value={isLoading ? "" : name}
+                    readOnly
+                    placeholder="Loading..."
+                    className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground outline-none"
                   />
                 </div>
 
@@ -81,15 +152,21 @@ export default function SettingsPage() {
                   >
                     Email Address
                   </label>
+
                   <input
                     id="email"
                     type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-foreground outline-none transition placeholder:text-muted focus:border-primary"
+                    value={isLoading ? "" : email}
+                    readOnly
+                    placeholder="Loading..."
+                    className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground outline-none"
                   />
                 </div>
               </div>
+
+              <p className="mt-4 text-[11px] text-muted">
+                Profile editing will be available once the update profile API is ready.
+              </p>
             </section>
 
             {/* Account Preferences */}
@@ -98,6 +175,7 @@ export default function SettingsPage() {
                 <h2 className="text-base font-bold text-foreground">
                   Account Preferences
                 </h2>
+
                 <p className="mt-1 text-xs text-muted">
                   Customize how you use BagiBareng.
                 </p>
@@ -110,19 +188,29 @@ export default function SettingsPage() {
                 >
                   Default Currency
                 </label>
+
                 <select
                   id="currency"
                   value={currency}
                   onChange={(e) => setCurrency(e.target.value)}
                   className="w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-foreground outline-none transition focus:border-primary"
                 >
-                  <option value="IDR">IDR - Indonesian Rupiah (Rp)</option>
-                  <option value="USD">USD - US Dollar ($)</option>
-                  <option value="SGD">SGD - Singapore Dollar (S$)</option>
-                  <option value="MYR">MYR - Malaysian Ringgit (RM)</option>
+                  <option value="IDR">
+                    IDR - Indonesian Rupiah (Rp)
+                  </option>
+                  <option value="USD">
+                    USD - US Dollar ($)
+                  </option>
+                  <option value="SGD">
+                    SGD - Singapore Dollar (S$)
+                  </option>
+                  <option value="MYR">
+                    MYR - Malaysian Ringgit (RM)
+                  </option>
                 </select>
+
                 <p className="mt-2 text-[11px] text-muted">
-                  This preference is currently for display purposes only.
+                  This preference is currently for display purposes only and is not saved to your account.
                 </p>
               </div>
             </section>
@@ -130,14 +218,15 @@ export default function SettingsPage() {
             {/* Save Button */}
             <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-xs text-muted">
-                Changes are not saved to a database yet.
+                Profile changes are not available yet.
               </p>
 
               <button
-                onClick={handleSave}
-                className="rounded-full bg-primary-dark px-6 py-3 text-sm font-semibold text-white transition hover:bg-primary"
+                type="button"
+                disabled
+                className="cursor-not-allowed rounded-full bg-gray-300 px-6 py-3 text-sm font-semibold text-gray-500"
               >
-                {saved ? "Changes Saved ✓" : "Save Changes"}
+                Save Changes
               </button>
             </div>
           </div>
@@ -152,19 +241,26 @@ export default function SettingsPage() {
 
               <div className="flex items-center gap-3">
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-primary-dark">
-                  {getInitials(name)}
+                  {isLoading ? "..." : getInitials(name)}
                 </div>
+
                 <div className="min-w-0">
                   <p className="truncate text-sm font-bold text-foreground">
-                    {name}
+                    {isLoading ? "Loading..." : name}
                   </p>
-                  <p className="truncate text-xs text-muted">{email}</p>
+
+                  <p className="truncate text-xs text-muted">
+                    {isLoading ? "Loading..." : email}
+                  </p>
                 </div>
               </div>
 
               <div className="mt-5 border-t border-border pt-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted">Account Type</span>
+                  <span className="text-xs text-muted">
+                    Account Type
+                  </span>
+
                   <span className="text-xs font-semibold text-foreground">
                     Personal
                   </span>
@@ -177,16 +273,19 @@ export default function SettingsPage() {
               <h2 className="text-sm font-bold text-foreground">
                 Account Actions
               </h2>
+
               <p className="mt-2 text-xs leading-5 text-muted">
                 Sign out of your BagiBareng account on this device.
               </p>
 
               <button
-                onClick={() => (window.location.href = "/login")}
-                className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-red-100 px-4 py-2.5 text-xs font-semibold text-red-500 transition hover:bg-red-50"
+                type="button"
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+                className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-red-100 px-4 py-2.5 text-xs font-semibold text-red-500 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <span>↪</span>
-                Log out
+                {isLoggingOut ? "Logging out..." : "Log out"}
               </button>
             </section>
           </aside>

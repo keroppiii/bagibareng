@@ -2,9 +2,19 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { getInitials } from "@/utils/initials";
+import {
+  apiRequest,
+  removeAccessToken,
+} from "@/lib/api";
+
+type User = {
+  id: string;
+  name: string;
+  email: string;
+};
 
 const menuItems = [
   { icon: "⌂", label: "Dashboard", href: "/dashboard" },
@@ -14,12 +24,49 @@ const menuItems = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const response = await apiRequest<{ data: User }>("/auth/me");
+        setUser(response.data);
+      } catch {
+        setUser(null);
+      }
+    };
+
+    fetchUser();
+  }, []);
 
   const isActive = (href: string) =>
     href === "/dashboard"
       ? pathname === "/dashboard"
       : pathname === href || pathname.startsWith(`${href}/`);
+
+  const handleLogout = async () => {
+    if (isLoggingOut) return;
+
+    try {
+      setIsLoggingOut(true);
+
+      await apiRequest("/auth/logout", {
+        method: "POST",
+      });
+    } catch {
+      // Token tetap dihapus jika server tidak dapat dihubungi.
+    } finally {
+      removeAccessToken();
+      router.replace("/login");
+    }
+  };
+
+  const displayName = user?.name || "Loading...";
+  const initials = user ? getInitials(user.name) : "...";
 
   return (
     <>
@@ -34,6 +81,7 @@ export default function Sidebar() {
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-dark text-lg text-white">
               🧾
             </div>
+
             <span className="text-lg font-bold">
               BagiBareng<span className="text-primary">.</span>
             </span>
@@ -108,23 +156,28 @@ export default function Sidebar() {
             <div className="mt-4 border-t border-border pt-4">
               <div className="mb-3 flex items-center gap-3 px-2">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-primary-dark">
-                  {getInitials("Fatimah Nurmawati")}
+                  {initials}
                 </div>
 
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-bold">Fatimah</p>
-                  <p className="text-xs text-muted">Personal Account</p>
+                  <p className="truncate text-sm font-bold">
+                    {displayName}
+                  </p>
+                  <p className="truncate text-xs text-muted">
+                    {user?.email || "Personal Account"}
+                  </p>
                 </div>
               </div>
 
-              <Link
-                href="/login"
-                onClick={() => setIsMenuOpen(false)}
-                className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold text-muted transition hover:bg-red-50 hover:text-red-500"
+              <button
+                type="button"
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+                className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold text-muted transition hover:bg-red-50 hover:text-red-500 disabled:opacity-60"
               >
                 <span className="text-lg">↪</span>
-                Log out
-              </Link>
+                {isLoggingOut ? "Logging out..." : "Log out"}
+              </button>
             </div>
           </div>
         )}
@@ -137,6 +190,7 @@ export default function Sidebar() {
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-dark text-lg text-white">
             🧾
           </div>
+
           <span className="text-lg font-bold tracking-tight">
             BagiBareng<span className="text-primary">.</span>
           </span>
@@ -168,22 +222,28 @@ export default function Sidebar() {
         <div className="mt-auto border-t border-border pt-4">
           <div className="mb-2 flex items-center gap-2.5 rounded-xl p-2">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-primary-dark">
-              {getInitials("Fatimah Nurmawati")}
+              {initials}
             </div>
 
             <div className="min-w-0">
-              <p className="truncate text-xs font-bold">Fatimah</p>
-              <p className="text-[10px] text-muted">Personal Account</p>
+              <p className="truncate text-xs font-bold">
+                {displayName}
+              </p>
+              <p className="truncate text-[10px] text-muted">
+                {user?.email || "Personal Account"}
+              </p>
             </div>
           </div>
 
-          <Link
-            href="/login"
-            className="flex items-center gap-3 rounded-lg px-3 py-2 text-xs font-semibold text-muted transition hover:bg-red-50 hover:text-red-500"
+          <button
+            type="button"
+            onClick={handleLogout}
+            disabled={isLoggingOut}
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-xs font-semibold text-muted transition hover:bg-red-50 hover:text-red-500 disabled:opacity-60"
           >
             <span className="text-base">↪</span>
-            Log out
-          </Link>
+            {isLoggingOut ? "Logging out..." : "Log out"}
+          </button>
         </div>
       </aside>
     </>
