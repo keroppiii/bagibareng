@@ -1,3 +1,4 @@
+
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
@@ -5,6 +6,7 @@ import { AppController } from './app.controller';
 import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { validateEnv } from './config/env.validation';
+import { ExpensesModule } from './expenses/expenses.module';
 import { GroupsModule } from './groups/groups.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { UsersModule } from './users/users.module';
@@ -16,6 +18,7 @@ import { UsersModule } from './users/users.module';
     UsersModule,
     AuthModule,
     GroupsModule,
+    ExpensesModule,
   ],
   controllers: [AppController],
   providers: [
