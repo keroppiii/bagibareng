@@ -23,6 +23,14 @@ export class UsersService {
     });
   }
 
+  updateName(id: string, name: string) {
+  return this.prisma.user.update({
+    where: { id },
+    data: { name },
+    select: publicUserSelect,
+  });
+}
+
   create(data: { name: string; email: string; passwordHash: string }) {
     return this.prisma.user.create({ data, select: publicUserSelect });
   }

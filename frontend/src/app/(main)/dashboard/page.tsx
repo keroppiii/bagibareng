@@ -22,6 +22,34 @@ type User = {
   email: string;
 };
 
+type Activity = {
+  id: string;
+  type: "EXPENSE_ADDED" | "PAYMENT_CONFIRMED";
+  actorId: string;
+  groupId: string;
+  expenseId: string | null;
+  expenseTitle: string;
+  createdAt: string;
+  actor: {
+    id: string;
+    name: string;
+  };
+  group: {
+    id: string;
+    name: string;
+    emoji: string;
+  };
+};
+
+type Balance = {
+  userId: string;
+  name: string;
+  email: string;
+  totalOwed: number;
+  totalOwing: number;
+  balance: number;
+};
+
 const groupColors = [
   "bg-blue-50",
   "bg-orange-50",
@@ -37,9 +65,48 @@ const formatRupiah = (amount: number) =>
     maximumFractionDigits: 0,
   }).format(amount);
 
+  const formatTimeAgo = (dateString: string) => {
+  const now = new Date();
+  const date = new Date(dateString);
+
+  const diffInSeconds = Math.floor(
+    (now.getTime() - date.getTime()) / 1000
+  );
+
+  if (diffInSeconds < 60) {
+    return "Just now";
+  }
+
+  const diffInMinutes = Math.floor(diffInSeconds / 60);
+
+  if (diffInMinutes < 60) {
+    return `${diffInMinutes} minutes ago`;
+  }
+
+  const diffInHours = Math.floor(diffInMinutes / 60);
+
+  if (diffInHours < 24) {
+    return `${diffInHours} hours ago`;
+  }
+
+  const diffInDays = Math.floor(diffInHours / 24);
+
+  if (diffInDays < 7) {
+    return `${diffInDays} days ago`;
+  }
+
+  return date.toLocaleDateString("en-US", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+};
+
 export default function DashboardPage() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [user, setUser] = useState<User | null>(null);
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [balances, setBalances] = useState<Balance[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -49,13 +116,28 @@ export default function DashboardPage() {
         setIsLoading(true);
         setError("");
 
-        const [groupsResponse, userResponse] = await Promise.all([
-          apiRequest<{ data: Group[]; meta: unknown }>("/groups"),
-          apiRequest<{ data: User }>("/auth/me"),
-        ]);
+        const [groupsResponse, userResponse, activitiesResponse] =
+          await Promise.all([
+            apiRequest<{ data: Group[]; meta: unknown }>("/groups"),
+            apiRequest<{ data: User }>("/auth/me"),
+            apiRequest<{ data: Activity[] }>("/activity"),
+          ]);
 
         setGroups(groupsResponse.data);
         setUser(userResponse.data);
+        setActivities(activitiesResponse.data);
+
+        const balanceResponses = await Promise.all(
+          groupsResponse.data.map((group) =>
+            apiRequest<{ data: Balance[] }>(
+              `/groups/${group.id}/expenses/balances`
+            )
+          )
+        );
+
+        setBalances(
+          balanceResponses.flatMap((response) => response.data)
+        );
       } catch (err) {
         setError(
           err instanceof Error
@@ -74,6 +156,20 @@ export default function DashboardPage() {
     (total, group) => total + group.totalExpense,
     0
   );
+
+  const myBalances = balances.filter(
+  (balance) => balance.userId === user?.id
+);
+
+const totalOwing = myBalances.reduce(
+  (total, balance) => total + balance.totalOwing,
+  0
+);
+
+const totalOwed = myBalances.reduce(
+  (total, balance) => total + balance.totalOwed,
+  0
+);
 
   const today = new Date();
 
@@ -189,11 +285,11 @@ export default function DashboardPage() {
             </div>
 
             <h2 className="text-2xl font-extrabold text-red-500">
-              —
+              {isLoading ? "..." : formatRupiah(totalOwing)}
             </h2>
 
             <p className="mt-1 text-xs text-muted">
-              Awaiting transaction API
+              Across all groups
             </p>
           </div>
 
@@ -210,11 +306,11 @@ export default function DashboardPage() {
             </div>
 
             <h2 className="text-2xl font-extrabold text-green-600">
-              —
+              {isLoading ? "..." : formatRupiah(totalOwed)}
             </h2>
 
             <p className="mt-1 text-xs text-muted">
-              Awaiting transaction API
+              Across all groups
             </p>
           </div>
         </div>
@@ -308,33 +404,98 @@ export default function DashboardPage() {
           </div>
 
           {/* RECENT ACTIVITIES */}
-          <div className="rounded-2xl border border-border bg-white p-5 sm:p-6">
+<div className="flex h-[400px] min-h-0 flex-col rounded-2xl border border-border bg-white p-5 sm:p-6">
 
-            <div className="mb-6">
-              <h2 className="text-lg font-bold">
-                Recent Activity
-              </h2>
+  {/* HEADER */}
+  <div className="mb-5 shrink-0">
+    <h2 className="text-lg font-bold">
+      Recent Activity
+    </h2>
 
-              <p className="mt-1 text-xs text-muted">
-                Your latest transactions
-              </p>
-            </div>
+    <p className="mt-1 text-xs text-muted">
+      Your latest transactions
+    </p>
+  </div>
 
-            <div className="flex flex-col items-center py-10 text-center">
-              <div className="mb-3 text-3xl">
-                🧾
+  {/* ACTIVITY LIST */}
+  <div className="min-h-0 flex-1 overflow-y-auto pr-2">
+    {isLoading ? (
+      <p className="py-8 text-center text-sm text-muted">
+        Loading activities...
+      </p>
+    ) : activities.length > 0 ? (
+      <div className="space-y-4">
+        {activities.map((activity) => {
+          const isExpenseAdded =
+            activity.type === "EXPENSE_ADDED";
+
+          const isOwnActivity =
+            activity.actorId === user?.id;
+
+          return (
+            <Link
+              href={`/groups/${activity.groupId}`}
+              key={activity.id}
+              className="flex gap-3 rounded-xl p-2 transition hover:bg-background"
+            >
+              {/* ICON */}
+              <div
+                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-lg ${
+                  isExpenseAdded
+                    ? "bg-purple-50"
+                    : "bg-green-50"
+                }`}
+              >
+                {isExpenseAdded ? "🧾" : "✅"}
               </div>
 
-              <p className="text-sm font-semibold text-foreground">
-                No recent activity
-              </p>
+              {/* CONTENT */}
+              <div className="min-w-0 flex-1">
+                <p className="text-sm leading-relaxed">
+                  <span className="font-semibold">
+                    {isOwnActivity
+                      ? "You"
+                      : activity.actor.name}
+                  </span>{" "}
+                  {isExpenseAdded
+                    ? "added an expense"
+                    : "confirmed a payment"}
+                </p>
 
-              <p className="mt-2 text-xs text-muted">
-                Your transactions will appear here once the Expenses API is available.
-              </p>
-            </div>
-          </div>
+                <p className="mt-1 truncate text-sm font-semibold text-foreground">
+                  {activity.expenseTitle}
+                </p>
+
+                <p className="mt-1 truncate text-xs text-muted">
+                  {activity.group.emoji} {activity.group.name}
+                </p>
+
+                <p className="mt-1 text-[11px] text-muted">
+                  {formatTimeAgo(activity.createdAt)}
+                </p>
+              </div>
+            </Link>
+          );
+        })}
+      </div>
+    ) : (
+      <div className="flex h-full flex-col items-center justify-center py-8 text-center">
+        <div className="mb-3 text-3xl">
+          🧾
         </div>
+
+        <p className="text-sm font-semibold text-foreground">
+          No recent activity
+        </p>
+
+        <p className="mt-2 text-xs text-muted">
+          Your latest transactions will appear here.
+        </p>
+      </div>
+    )}
+  </div>
+</div>
+</div>
 
         {/* FOOTER */}
         <footer className="mt-8 border-t border-border py-5 text-center text-xs text-muted">

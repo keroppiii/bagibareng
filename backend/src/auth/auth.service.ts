@@ -54,6 +54,16 @@ export class AuthService {
     });
   }
 
+  async updateProfile(userId: string, name: string) {
+  const trimmedName = name.trim();
+
+  if (!trimmedName) {
+    throw new ConflictException('Nama tidak boleh kosong');
+  }
+
+  return this.usersService.updateName(userId, trimmedName);
+}
+
   private async buildAuthResponse(user: {
     id: string;
     name: string;

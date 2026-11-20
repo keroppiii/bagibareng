@@ -164,26 +164,38 @@ export class ExpensesService {
     );
 
     return this.prisma.$transaction(async (tx) => {
-      return tx.expense.create({
-        data: {
-          groupId,
-          title: dto.title,
-          description: dto.description || null,
-          category: dto.category,
-          amount: dto.amount,
-          paidById: dto.paidById,
-          createdById: userId,
-          expenseDate: dto.expenseDate
-            ? new Date(dto.expenseDate)
-            : new Date(),
-          splitMethod: dto.splitMethod,
-          splits: {
-            create: calculatedSplits,
-          },
-        },
-        include: this.expenseInclude,
-      });
-    });
+        const expense = await tx.expense.create({
+            data: {
+            groupId,
+            title: dto.title,
+            description: dto.description || null,
+            category: dto.category,
+            amount: dto.amount,
+            paidById: dto.paidById,
+            createdById: userId,
+            expenseDate: dto.expenseDate
+                ? new Date(dto.expenseDate)
+                : new Date(),
+            splitMethod: dto.splitMethod,
+            splits: {
+                create: calculatedSplits,
+            },
+            },
+            include: this.expenseInclude,
+        });
+
+        await tx.activityLog.create({
+            data: {
+            type: 'EXPENSE_ADDED',
+            actorId: userId,
+            groupId,
+            expenseId: expense.id,
+            expenseTitle: expense.title,
+            },
+        });
+
+        return expense;
+        });
   }
 
   async findAll(
@@ -520,6 +532,7 @@ export class ExpensesService {
         expense: {
           select: {
             paidById: true,
+                title: true,
           },
         },
       },
@@ -547,23 +560,34 @@ export class ExpensesService {
       );
     }
 
-    return this.prisma.expenseSplit.update({
-      where: {
-        id: splitId,
-      },
-      data: {
-        isPaid: true,
-        paidAt: new Date(),
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-      },
-    });
+    return this.prisma.$transaction(async (tx) => {
+        const updatedSplit = await tx.expenseSplit.update({
+            where: { id: splitId },
+            data: {
+            isPaid: true,
+            paidAt: new Date(),
+            },
+            include: {
+            user: {
+                select: {
+                id: true,
+                name: true,
+                },
+            },
+            },
+        });
+
+        await tx.activityLog.create({
+            data: {
+            type: 'PAYMENT_CONFIRMED',
+            actorId: userId,
+            groupId,
+            expenseId,
+            expenseTitle: split.expense.title,
+            },
+        });
+
+        return updatedSplit;
+        });
   }
 }

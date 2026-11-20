@@ -10,6 +10,7 @@ import { ExpensesModule } from './expenses/expenses.module';
 import { GroupsModule } from './groups/groups.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { UsersModule } from './users/users.module';
+import { ActivityModule } from './activity/activity.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { UsersModule } from './users/users.module';
     AuthModule,
     GroupsModule,
     ExpensesModule,
+    ActivityModule,
   ],
   controllers: [AppController],
   providers: [

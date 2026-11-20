@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Patch, Post } from '@nestjs/common';
 import { type AuthUser, CurrentUser } from '../common/decorators/current-user.decorator';
 import { Public } from '../common/decorators/public.decorator';
 import { AuthService } from './auth.service';
@@ -26,6 +26,14 @@ export class AuthController {
   me(@CurrentUser() user: AuthUser) {
     return user;
   }
+
+  @Patch('profile')
+updateProfile(
+  @CurrentUser() user: AuthUser,
+  @Body('name') name: string,
+) {
+  return this.authService.updateProfile(user.id, name);
+}
 
   /** JWT stateless: logout dilakukan client dengan membuang token. */
   @Post('logout')

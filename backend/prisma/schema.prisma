@@ -28,6 +28,11 @@ enum ExpenseCategory {
   OTHER
 }
 
+enum ActivityType {
+  EXPENSE_ADDED
+  PAYMENT_CONFIRMED
+}
+
 model User {
   id           String   @id @default(uuid())
   name         String
@@ -41,6 +46,8 @@ model User {
   paidExpenses    Expense[]      @relation("ExpensePayer")
   createdExpenses Expense[]      @relation("ExpenseCreator")
   splits          ExpenseSplit[]
+
+  activities      ActivityLog[]
 }
 
 model Group {
@@ -56,6 +63,8 @@ model Group {
   owner    User          @relation(fields: [ownerId], references: [id], onDelete: Restrict)
   members  GroupMember[]
   expenses Expense[]
+
+  activities ActivityLog[]
 
   @@index([ownerId])
 }
@@ -110,4 +119,20 @@ model ExpenseSplit {
 
   @@unique([expenseId, userId])
   @@index([userId, isPaid])
+}
+
+model ActivityLog {
+  id           String       @id @default(uuid())
+  type         ActivityType
+  actorId      String
+  groupId      String
+  expenseId    String?
+  expenseTitle String
+  createdAt    DateTime     @default(now())
+
+  actor User  @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@index([groupId, createdAt(sort: Desc)])
+  @@index([actorId])
 }

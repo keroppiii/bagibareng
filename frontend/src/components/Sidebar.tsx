@@ -30,18 +30,32 @@ export default function Sidebar() {
   const [user, setUser] = useState<User | null>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const response = await apiRequest<{ data: User }>("/auth/me");
-        setUser(response.data);
-      } catch {
-        setUser(null);
-      }
-    };
+useEffect(() => {
+  const fetchUser = async () => {
+    try {
+      const response = await apiRequest<{ data: User }>("/auth/me");
+      setUser(response.data);
+    } catch {
+      setUser(null);
+    }
+  };
 
-    fetchUser();
-  }, []);
+  const handleProfileUpdated = (event: Event) => {
+    const customEvent = event as CustomEvent<User>;
+    setUser(customEvent.detail);
+  };
+
+  fetchUser();
+
+  window.addEventListener("profile-updated", handleProfileUpdated);
+
+  return () => {
+    window.removeEventListener(
+      "profile-updated",
+      handleProfileUpdated
+    );
+  };
+}, []);
 
   const isActive = (href: string) =>
     href === "/dashboard"

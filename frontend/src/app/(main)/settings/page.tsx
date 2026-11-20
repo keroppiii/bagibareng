@@ -19,7 +19,10 @@ export default function SettingsPage() {
   const router = useRouter();
 
   const [user, setUser] = useState<User | null>(null);
+  const [fullName, setFullName] = useState("");
   const [currency, setCurrency] = useState("IDR");
+  const [isSaving, setIsSaving] = useState(false);
+  const [success, setSuccess] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [error, setError] = useState("");
@@ -36,6 +39,7 @@ export default function SettingsPage() {
         );
 
         setUser(response.data);
+        setFullName(response.data.name);
       } catch (err) {
         setError(
           err instanceof Error
@@ -49,6 +53,51 @@ export default function SettingsPage() {
 
     fetchProfile();
   }, []);
+
+  // Update Profile
+const handleSaveChanges = async () => {
+  const trimmedName = fullName.trim();
+
+  if (!trimmedName) {
+    setError("Full Name tidak boleh kosong.");
+    return;
+  }
+
+  try {
+    setIsSaving(true);
+    setError("");
+    setSuccess("");
+
+    const response = await apiRequest<{ data: User }>(
+      "/auth/profile",
+      {
+        method: "PATCH",
+        body: JSON.stringify({ name: trimmedName }),
+      }
+    );
+
+    console.log("Profile update response:", response);
+
+    setUser(response.data);
+setFullName(response.data.name);
+
+window.dispatchEvent(
+  new CustomEvent("profile-updated", {
+    detail: response.data,
+  })
+);
+
+setSuccess("Profile berhasil diperbarui!");
+  } catch (err) {
+    setError(
+      err instanceof Error
+        ? err.message
+        : "Gagal memperbarui profile."
+    );
+  } finally {
+    setIsSaving(false);
+  }
+};
 
   // Logout
   const handleLogout = async () => {
@@ -138,10 +187,11 @@ export default function SettingsPage() {
                   <input
                     id="fullName"
                     type="text"
-                    value={isLoading ? "" : name}
-                    readOnly
-                    placeholder="Loading..."
-                    className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground outline-none"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    disabled={isLoading || isSaving}
+                    placeholder="Enter your full name"
+                    className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition focus:border-primary disabled:opacity-60"
                   />
                 </div>
 
@@ -163,10 +213,6 @@ export default function SettingsPage() {
                   />
                 </div>
               </div>
-
-              <p className="mt-4 text-[11px] text-muted">
-                Profile editing will be available once the update profile API is ready.
-              </p>
             </section>
 
             {/* Account Preferences */}
@@ -209,26 +255,24 @@ export default function SettingsPage() {
                   </option>
                 </select>
 
-                <p className="mt-2 text-[11px] text-muted">
-                  This preference is currently for display purposes only and is not saved to your account.
-                </p>
               </div>
             </section>
 
             {/* Save Button */}
             <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-xs text-muted">
-                Profile changes are not available yet.
-              </p>
+  <p className="text-xs text-muted">
+    {success || "Update your profile information."}
+  </p>
 
-              <button
-                type="button"
-                disabled
-                className="cursor-not-allowed rounded-full bg-gray-300 px-6 py-3 text-sm font-semibold text-gray-500"
-              >
-                Save Changes
-              </button>
-            </div>
+  <button
+    type="button"
+    onClick={handleSaveChanges}
+    disabled={isLoading || isSaving}
+    className="rounded-full bg-primary-dark px-6 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+  >
+    {isSaving ? "Saving..." : "Save Changes"}
+  </button>
+</div>
           </div>
 
           {/* Account Sidebar */}
